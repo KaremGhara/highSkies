@@ -1,0 +1,361 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+
+
+    <title>DataTable Example</title>
+
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.3/css/responsive.dataTables.min.css">
+
+    <style type="text/css">
+
+        button {
+            margin-left: 10px;
+        }
+
+        .colorDiv {
+            height: 30px;
+            width: 70px;
+            border: 2px solid black
+        }
+
+        #newBTN {
+            background-color: blueviolet;
+            margin-bottom: 10px;
+        }
+    </style>
+
+
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/dataTables.responsive.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap.min.js"></script>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <script src="../Scripts/ajaxCalls.js"></script>
+    <link href="../Styles/StyleSheet1.css" rel="stylesheet" />
+
+    <script>
+
+        $(document).ready(function () {
+
+            mode = "";
+
+            $("#cancelSaveBTN").on("click", function () {
+                discount = null;
+                $("#editDiv").hide();
+                if (mode == "new") $("#pForm").show();
+                mode = "";
+            });
+
+            $("#newBTN").on("click", function () {
+                discount = null;
+                mode = "new";
+                $("#pForm").hide();
+                $("#editDiv").show();
+                clearFields();
+                $("#editDiv :input").prop("disabled", false); // new mode: enable all controls in the form
+            });
+
+            ajaxCall("GET", "../api/TourContr", null, getSuccess, error);
+            // once the document is ready we fetch a list of cars from the server
+            //ajaxCall("GET", "../api/TourCont", null, getSuccess, error);
+            $("#TourForm").submit(onSubmitFunc); // wire the submit event to a function called f1
+
+            $("#editDiv").hide();
+        });
+
+        // wire all the buttons to their functions
+        function buttonEvents() {
+
+            $(document).on("click", ".editBtn", function () {
+                mode = "edit";
+                markSelected(this);
+                $("#editDiv").show();
+                $("#editDiv :input").prop("disabled", false); // edit mode: enable all controls in the form
+                populateFields(this.getAttribute('data-tourId')); // fill the form fields according to the selected row
+            });
+
+            $(document).on("click", ".viewBtn", function () {
+                mode = "view";
+                markSelected(this);
+                $("#editDiv").show();
+                row.className = 'selected';
+                $("#editDiv :input").attr("disabled", "disabled"); // view mode: disable all controls in the form
+                populateFields(this.getAttribute('data-tourId'));
+            });
+
+            $(document).on("click", ".delexteBtn", function () {
+                mode = "delete";
+                markSelected(this);
+                var discountId = this.getAttribute('data-tourId');
+                swal({ // this will open a dialouge
+                    title: "Are you sure ??",
+                    text: "",
+                    icon: "warning",
+                    buttons: true,
+                    dangerMode: true
+                })
+                    .then(function (willDelete) {
+                        if (willDelete) DeleteDiscount(tourId);
+                        else swal("Not Deleted!");
+                    });
+            });
+        }
+
+        // mark the selected row
+        function markSelected(btn) {
+            $("#toursTable tr").removeClass("selected"); // remove seleced class from rows that were selected before
+            row = (btn.parentNode).parentNode; // button is in TD which is in Row
+            row.className = 'selected'; // mark as selected
+        }
+
+        function Deletetour(id) {
+            ajaxCall("DELETE", "../api/TourCont", id, deleteSuccess, error);
+        }
+
+
+        function onSubmitFunc() {
+
+            var Id = tours.length;
+            if (mode == "edit") {
+                Id = tours.TourId;
+            }
+            tourCompany
+
+            let tourToSave = {
+                tourId: Id,
+                city: $("#city").val(),
+                tourTitle: $("#tourTitle").val(),
+                tourDescription: $("#tourDescrip").val(),
+                tourLength: $("#TourLength").val(),
+                tourPrice: $("#Price").val(),
+                tourImage: $("#Image").val()
+            }
+
+            if (mode == "edit")
+                ajaxCall("PUT", "../api/TourCont", JSON.stringify(tourToSave), updateSuccess, error);
+            else if (mode == "new")
+                ajaxCall("POST", "../api/TourCont", JSON.stringify(tourToSave), insertSuccess, error);
+            return false;
+        }
+
+        // fill the form fields
+        function populateFields(TourId) {
+            tour = getTour(TourId);
+            $('#City').val(tour.city);
+            $('#Country').val(tour.city)
+            $('#tourTitle').val(tour.tourTitle);
+            $('#tourDescrip').val(tour.tourDescription);
+            $('#TourLength').val(tour.tourLength);
+            $('#Price').val(tour.Price);
+            $('Image').val(tour.tourImage);
+        }
+
+       
+
+        // fill the form fields
+        function clearFields() {
+            $('#City').val("");
+            $('#Country').val("");
+            $('#tourTitle').val("");
+            $('#tourDescrip').val("");
+            $('#TourLength').val("");
+            $('#Price').val("");
+            $("Image").val("");
+        }
+
+        // get a car according to its Id
+        function getTour(id) {
+            for (i in tours) {
+                if (tours[i].TourId == id)
+                    return tours[i];
+            }
+            return null;
+        }
+
+        // success callback function after update
+        function updateSuccess(tourstdata) {
+            tbl.clear();
+            redrawTable(tbl, tourstdata);
+            buttonEvents();
+            $("#editDiv").hide();
+            swal("Updated Successfuly!", "Great Job", "success");
+            mode = "";
+        }
+
+        // success callback function after update
+        function insertSuccess(tourstdata) {
+            $("#pForm").show();
+            tbl.clear();
+            redrawTable(tbl, tourstdata);
+            buttonEvents();
+            $("#editDiv").hide();
+            swal("Inserted Successfuly!", "Great Job", "success");
+            mode = "";
+        }
+
+        // success callback function after delete
+        function deleteSuccess(tourstdata) {
+            tbl.clear();
+            redrawTable(tbl, tourstdata);
+            buttonEvents(); // after redrawing the table, we must wire the new buttons
+            $("#editDiv").hide();
+            swal("Deleted Successfuly!", "Great Job", "success");
+            mode = "";
+        }
+
+        // redraw a datatable with new data
+        function redrawTable(tbl, data) {
+            tbl.clear();
+            for (var i = 0; i < data.length; i++) {
+                tbl.row.add(data[i]);
+            }
+            tbl.draw();
+        }
+
+        // this function is activated in case of a success
+        function getSuccess(toursdata) {
+            tours = toursdata;
+            
+            try {
+                tbl = $('#toursTable').DataTable({
+                    data: toursdata,
+                    pageLength: 5,
+                    columns: [
+                        {
+                            render: function (data, type, row, meta) {
+                                let datatour = "data-TourId='" + row.TourId + "'";
+
+                                editBtn = "<button type='button' class = 'editBtn btn btn-success' " + datatour + "> Edit </button>";
+                                viewBtn = "<button type='button' class = 'viewBtn btn btn-info' " + datatour + "> View </button>";
+                                deleteBtn = "<button type='button' class = 'deleteBtn btn btn-danger' " + datatour + "> Delete </button>";
+                                return editBtn + viewBtn + deleteBtn;
+                            }
+                        },
+                        { data: "TourId" },
+                        { data: "Country" },
+                        { data: "City" },
+                        { data: "TourTitle" },
+                        { data: "TourLength" },
+                        { data: "TourPrice" },
+                        { data: "TourDescription" },
+                        { data: "TourImgURL"}
+                    ],
+                });
+                buttonEvents();
+            }
+
+            catch (err) {
+                alert(err);
+            }
+        }
+
+        // this function is activated in case of a failure
+        function error(err) {
+            swal("Error: " + err);
+        }
+
+        function backToMain() {
+            window.location.replace('index.html');
+        }
+
+    </script>
+
+</head>
+<body>
+
+    <div class="hero-nav">
+        <div class="hero-nav__inner">
+            <h1 id="HStitle">High Skies</h1>
+            <div class="hero-nav__button">
+            </div>
+        </div>
+    </div>
+    <div>
+        <a class="aTabs" onclick="backToMain()" style="width:auto" ;>Back to the Mainpage</a>
+    </div>
+    <div class="container">
+        <input type="button" value="New" class="btn btn-primary btn-lg" id="newBTN" />
+        <form id="pForm">
+            <table id="toursTable" class="display nowrap" style="width:100%">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Tour Id</th>
+                        <th>Country</th>
+                        <th>City</th>
+                        <th>Tour Title</th>
+                        <th>Tour Length (in Hrs)</th>
+                        <th>Price (in Euros)</th>
+                        <th>Tour Description</th>
+                        <th>Tour ImgURL</th>
+                    </tr>
+                </thead>
+            </table>
+
+        </form>
+
+        <div id="editDiv">
+            <form id="TourForm">
+                <div class="form-group row">
+
+                    <div class="form-group col-sm-4">
+                        <label for="Country"><span class="red-star">★ </span>Country</label>
+                        <input type="text" class="form-control" id="Country" placeholder="Enter the Country" required>
+                    </div>
+
+
+                    <div class="form-group col-sm-4">
+                        <label for="City"><span class="red-star">★ </span>City</label>
+                        <input type="text" class="form-control" id="city" placeholder="Enter the City" required>
+                    </div>
+                    <div class="form-group col-sm-4">
+                        <label for="TourTitler"><span class="red-star">★ </span>Tour title</label>
+                        <input type="text" class="form-control" id="tourTitle" placeholder="Enter tour title" required>
+                    </div>
+                </div>
+
+                <div class="form-group row">
+
+                    <div class="form-group col-sm-4">
+                        <label for="TourLength"><span class="red-star">★ </span>Tour Length</label>
+                        <input type="number" class="form-control" id="TourLength" placeholder="Enter tour Length" required />
+                    </div>
+                    <div class="form-group col-sm-4">
+                        <label for="Price"><span class="red-star">★ </span>Price</label>
+                        <input type="number" class="form-control" id="Price" placeholder="Enter tour price" required />
+                    </div>
+                    <div class="form-group col-sm-4">
+                        <label for="arivalDate"><span class="red-star">★ </span>Image</label>
+                        <input type="text" class="form-control" id="Image" placeholder="Enter tour description" required>
+                    </div>
+
+                    <div class="form-group col-sm-4">
+                        <label for="arivalDate"><span class="red-star">★ </span>Tour Description</label>
+                        <textarea rows="6" cols="50" name="comment" form="TourForm"> Enter tour Description</textarea>
+                    </div>
+                </div>
+
+                <div class="form-group row">
+                    <div class="form-group col-sm-8">
+                        <label for="description">Tour Description</label>
+                        <textarea rows="6" class="form-control" id="tourDescrip" placeholder="Enter the description"></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg" id="saveBTN">Save</button>
+                <input type="button" class="btn btn-warning btn-lg" id="cancelSaveBTN" value="Cancel" />
+            </form>
+        </div>
+
+    </div>
+
+</body>
+</html>
